@@ -1,9 +1,5 @@
 {
   "name": "The Diary",
-  "application": "riddle",
-  "qtfb": true,
-  "disablesWindowedMode": true,
-  "environment": {
-    "RUST_BACKTRACE": "1"
-  }
+  "application": "appload-launch.sh",
+  "qtfb": false
 }
