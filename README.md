@@ -2,7 +2,7 @@
 
 > **This is a fork of [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)**,
 > adapted for the smaller **reMarkable Paper Pro Move** (codename *chiappa*,
-> 954×1696) and with an optional **native Korean** build (나눔손글씨 펜 폰트 +
+> 954×1696) and with an optional **native Korean** build (나눔손글씨 열일체 폰트 +
 > 한국어 페르소나). All credit for the original diary goes to Maxime Rivest.
 > Licensed **MIT**, same as upstream.
 
@@ -27,7 +27,7 @@ Move-specific values are baked in:
 - **qtfb pacing** is env-tunable (windowed mode goes through the compositor, so
   it can't sustain a high refresh rate): `RIDDLE_FLUSH_MS`, `RIDDLE_REPLY_STEP_MS`,
   `RIDDLE_REPLY_BUDGET` in `oracle.env`.
-- **Korean build** (`--features korean`): embeds Nanum Pen Script (Hangul+Latin)
+- **Korean build** (`--features korean`): embeds Nanum YeorIrChe (Hangul+Latin)
   and swaps the persona + UI strings to native Korean.
 
 > ⚠️ These builds target the **Move only**. For the original Paper Pro use upstream.
@@ -100,7 +100,7 @@ See `scripts/` for launch examples.
 ## Fonts
 
 - English: **Dancing Script** (SIL OFL 1.1) — `fonts/OFL.txt`
-- Korean: **Nanum Pen Script** (SIL OFL 1.1) — `fonts/OFL-NanumPenScript.txt`
+- Korean: **Nanum YeorIrChe (나눔손글씨 열일체)** (SIL OFL 1.1) — `fonts/OFL-NanumYeorIrChe.txt`
 
 ## License & credits
 

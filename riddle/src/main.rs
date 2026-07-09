@@ -29,12 +29,12 @@ use ab_glyph::FontRef;
 use fb::{BBox, SCREEN_H, SCREEN_W};
 use surface::{Surface, BLACK, WHITE};
 
-// English (default): Dancing Script. Korean (`--features korean`): Nanum Pen
-// Script, which carries both Hangul and Latin glyphs. Both are SIL OFL 1.1.
+// English (default): Dancing Script. Korean (`--features korean`): Nanum
+// YeorIrChe, which carries both Hangul and Latin glyphs. Both are SIL OFL 1.1.
 #[cfg(not(feature = "korean"))]
 const FONT_TTF: &[u8] = include_bytes!("../fonts/DancingScript.ttf");
 #[cfg(feature = "korean")]
-const FONT_TTF: &[u8] = include_bytes!("../fonts/NanumPenScript-Regular.ttf");
+const FONT_TTF: &[u8] = include_bytes!("../fonts/NanumYeorIrChe-Regular.ttf");
 const PNG_PATH: &str = "/tmp/riddle-page.png";
 
 const IDLE_COMMIT: Duration = Duration::from_millis(2800);
