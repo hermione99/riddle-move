@@ -17,6 +17,8 @@ ureq = { version = "2.10", default-features = false, features = ["tls"] }
 [features]
 # Link libquill.so (vendor e-ink engine C ABI) for full-takeover mode.
 takeover = []
+# Korean build: embed Nanum Pen Script and use a native Korean persona + UI.
+korean = []
 
 [profile.release]
 strip = true

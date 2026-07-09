@@ -1,3 +1,95 @@
+# riddle — for the reMarkable Paper Pro **Move** (한국어 지원)
+
+> **This is a fork of [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)**,
+> adapted for the smaller **reMarkable Paper Pro Move** (codename *chiappa*,
+> 954×1696) and with an optional **native Korean** build (나눔손글씨 펜 폰트 +
+> 한국어 페르소나). All credit for the original diary goes to Maxime Rivest.
+> Licensed **MIT**, same as upstream.
+
+Write on the page with your pen. After a pause, the diary **drinks your ink**,
+thinks for a moment, and answers in a flowing hand — now on the Move, and now
+in Korean if you want it.
+
+한 줄 요약: **리마커블 페이퍼 프로 무브**용으로 개조하고, 원하면 **한글 손글씨체 +
+자연스러운 한국어**로 답하도록 만든 riddle 포크입니다.
+
+---
+
+## What's different from upstream
+
+The Move has a different panel and digitizer than the big Paper Pro, so the
+Move-specific values are baked in:
+
+- **Screen** 954×1696 (was 1620×2160) — `src/fb.rs`
+- **qtfb (windowed) format** `FBFMT_RMPPM_RGB565` / 954×1696 — `src/display.rs`, `src/qtfb.rs`
+- **Pen digitizer range** 6760×11960 (Move's "Elan marker input") — `src/pen.rs`
+- **Reply font size** scaled to the smaller screen — `src/main.rs`
+- **qtfb pacing** is env-tunable (windowed mode goes through the compositor, so
+  it can't sustain a high refresh rate): `RIDDLE_FLUSH_MS`, `RIDDLE_REPLY_STEP_MS`,
+  `RIDDLE_REPLY_BUDGET` in `oracle.env`.
+- **Korean build** (`--features korean`): embeds Nanum Pen Script (Hangul+Latin)
+  and swaps the persona + UI strings to native Korean.
+
+> ⚠️ These builds target the **Move only**. For the original Paper Pro use upstream.
+
+## Building
+
+Two independent switches:
+- **Language:** English (default) or `--features korean`
+- **Display:** windowed via AppLoad/qtfb (default), or full-takeover `--features takeover`
+
+```sh
+cd riddle
+
+# English, windowed (static musl — no SDK needed):
+cargo build --release --target aarch64-unknown-linux-musl
+
+# Korean, windowed:
+cargo build --release --target aarch64-unknown-linux-musl --features korean
+
+# Korean, full-takeover (instant ink — needs libquill.so + libqsgepaper.so, see below):
+cargo build --release --target aarch64-unknown-linux-gnu --features "korean takeover"
+```
+
+### Vendor libraries (takeover mode only) — not distributed here
+
+Takeover mode links two libraries that are **not in this repo** and must come
+from **your own device**:
+
+- `libqsgepaper.so` — reMarkable's proprietary e-ink scenegraph plugin.
+  Pull it from your device: `/usr/lib/plugins/scenegraph/libqsgepaper.so`.
+- `libquill.so` — build it from the `quill/` project (see upstream), or reuse
+  the one shipped in an upstream release bundle.
+
+Place them at `quill/vendor/libqsgepaper.so` and `quill/build/libquill.so`
+before building with `--features takeover`. They are `.gitignore`d on purpose.
+
+Windowed (musl) builds need **neither** — that's the easy path.
+
+### Packaging as an AppLoad app
+
+Drop a folder into `/home/root/xovi/exthome/appload/<name>/` containing the
+`riddle` binary, `icon.png`, `appload-launch.sh`, `external.manifest.json`, and
+your `oracle.env` (API key — **never commit this**). Windowed apps set
+`"qtfb": true`; takeover apps ship `libquill.so` alongside and stop xochitl.
+See `scripts/` for launch examples.
+
+## Fonts
+
+- English: **Dancing Script** (SIL OFL 1.1) — `fonts/OFL.txt`
+- Korean: **Nanum Pen Script** (SIL OFL 1.1) — `fonts/OFL-NanumPenScript.txt`
+
+## License & credits
+
+MIT (see `LICENSE`), inherited from **[MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)**.
+Fonts are SIL OFL 1.1 (see `fonts/`). The vendor libraries it interposes
+(`libqsgepaper.so`, Qt) are **not** included and must come from your own device.
+
+---
+
+<details>
+<summary><b>Original upstream README (reMarkable Paper Pro)</b></summary>
+
 # riddle — the diary of Tom Riddle, for the reMarkable Paper Pro
 
 Write on the page with your pen. After a pause, the diary **drinks your ink** —
@@ -157,3 +249,5 @@ The reply hand is [Dancing Script](https://github.com/googlefonts/DancingScript)
 MIT for everything in this repository (see `LICENSE`). The vendor libraries it
 interposes (`libqsgepaper.so`, Qt) are **not** included and must come from
 your own device/SDK.
+
+</details>

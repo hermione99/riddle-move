@@ -10,9 +10,9 @@ use std::os::fd::RawFd;
 
 use crate::fb::{SCREEN_H, SCREEN_W};
 
-// Digitizer axis ranges on the Paper Pro ("Elan marker input").
-const DIGI_MAX_X: i32 = 11180;
-const DIGI_MAX_Y: i32 = 15340;
+// Digitizer axis ranges on the Paper Pro Move ("Elan marker input").
+const DIGI_MAX_X: i32 = 6760;
+const DIGI_MAX_Y: i32 = 11960;
 pub const MAX_PRESSURE: i32 = 4096;
 
 const EV_SYN: u16 = 0;
@@ -26,7 +26,7 @@ const BTN_TOOL_PEN: u16 = 320;
 const BTN_TOOL_RUBBER: u16 = 321;
 const BTN_TOUCH: u16 = 330;
 
-const EVIOCGRAB: libc::c_ulong = 0x40044590;
+const EVIOCGRAB: libc::Ioctl = 0x40044590;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tool {

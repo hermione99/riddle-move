@@ -94,7 +94,9 @@ pub fn looks_like_question_mark(strokes: &[Vec<(i32, i32, i32)>]) -> bool {
     true
 }
 
+#[cfg(not(feature = "korean"))]
 const TITLE: &str = "The Diary";
+#[cfg(not(feature = "korean"))]
 const BODY: &[&str] = &[
     "Write, then rest your quill:",
     "the diary drinks your ink and Tom replies.",
@@ -105,7 +107,33 @@ const BODY: &[&str] = &[
     "",
     "A large ? summons this guide.",
 ];
+#[cfg(not(feature = "korean"))]
 const FOOTER: &str = "Touch pen to page to close.";
+
+#[cfg(feature = "korean")]
+const TITLE: &str = "톰의 일기장";
+#[cfg(feature = "korean")]
+const BODY: &[&str] = &[
+    "글을 쓰고 펜을 잠시 내려놓으세요.",
+    "일기장이 잉크를 삼키면 톰이 답합니다.",
+    "",
+    "펜을 뒤집으면 지워집니다.",
+    "다섯 손가락으로 탭하면 나갑니다.",
+    "전원 버튼을 누르면 일기장이 잠듭니다.",
+    "",
+    "크게 ? 를 그리면 이 안내가 나타납니다.",
+];
+#[cfg(feature = "korean")]
+const FOOTER: &str = "펜을 종이에 대면 닫힙니다.";
+
+#[cfg(not(feature = "korean"))]
+const SLEEP_MAIN: &str = "The diary sleeps.";
+#[cfg(not(feature = "korean"))]
+const SLEEP_SUB: &str = "Press the button to wake it.";
+#[cfg(feature = "korean")]
+const SLEEP_MAIN: &str = "일기장이 잠들었습니다.";
+#[cfg(feature = "korean")]
+const SLEEP_SUB: &str = "버튼을 누르면 깨어납니다.";
 
 const TITLE_PX: f32 = 88.0;
 const BODY_PX: f32 = 54.0;
@@ -175,8 +203,8 @@ pub fn show_sleep(surf: &mut Surface, font: &FontRef) -> Vec<u8> {
     frame(surf, 48, 48, SCREEN_W - 96, SCREEN_H - 96, 4);
     frame(surf, 66, 66, SCREEN_W - 132, SCREEN_H - 132, 1);
     let y = SCREEN_H * 38 / 100;
-    blit_centered(surf, font, "The diary sleeps.", 116.0, 0, SCREEN_W, y);
-    blit_centered(surf, font, "Press the button to wake it.", 56.0, 0, SCREEN_W, y + 230);
+    blit_centered(surf, font, SLEEP_MAIN, 116.0, 0, SCREEN_W, y);
+    blit_centered(surf, font, SLEEP_SUB, 56.0, 0, SCREEN_W, y + 230);
     saved
 }
 

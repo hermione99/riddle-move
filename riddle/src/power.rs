@@ -8,7 +8,7 @@ use std::os::fd::RawFd;
 
 const EV_KEY: u16 = 1;
 const KEY_POWER: u16 = 116;
-const EVIOCGRAB: libc::c_ulong = 0x40044590;
+const EVIOCGRAB: libc::Ioctl = 0x40044590;
 
 pub struct PowerButton {
     fd: RawFd,

@@ -31,15 +31,15 @@ impl Display {
             let key: i32 = key.parse().map_err(io::Error::other)?;
             let mut client = crate::qtfb::QtfbClient::connect(
                 key,
-                crate::qtfb::FBFMT_RMPP_RGB565,
-                1620,
-                2160,
+                crate::qtfb::FBFMT_RMPPM_RGB565,
+                954,
+                1696,
                 2,
             )?;
             let _ = client.set_refresh_mode(crate::qtfb::REFRESH_MODE_UFAST);
             let buf = client.framebuffer();
             let (ptr, len) = (buf.as_mut_ptr(), buf.len());
-            let surface = Surface::new(ptr, len, 1620, 2160, 1620 * 2, PixFmt::Rgb565);
+            let surface = Surface::new(ptr, len, 954, 1696, 954 * 2, PixFmt::Rgb565);
             return Ok((Display::Qtfb(client), surface));
         }
 

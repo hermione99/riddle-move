@@ -6,7 +6,7 @@ use std::os::fd::RawFd;
 const EV_ABS: u16 = 3;
 const ABS_MT_SLOT: u16 = 47;
 const ABS_MT_TRACKING_ID: u16 = 57;
-const EVIOCGRAB: libc::c_ulong = 0x40044590;
+const EVIOCGRAB: libc::Ioctl = 0x40044590;
 const MAX_SLOTS: usize = 16;
 
 pub struct TouchDevice {

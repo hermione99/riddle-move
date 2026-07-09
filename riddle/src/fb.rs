@@ -1,7 +1,7 @@
 //! Geometry helpers. Drawing lives in surface.rs.
 
-pub const SCREEN_W: usize = 1620;
-pub const SCREEN_H: usize = 2160;
+pub const SCREEN_W: usize = 954;
+pub const SCREEN_H: usize = 1696;
 
 /// Grow-only pixel bounding box, used to build update/dissolve regions.
 #[derive(Clone, Copy, Debug)]

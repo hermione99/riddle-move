@@ -22,6 +22,10 @@ pub const UPDATE_PARTIAL: i32 = 1;
 /// FBFMT_RMPP_RGB565: native 1620x2160, 2 bytes/pixel, stride = 3240.
 pub const FBFMT_RMPP_RGB565: u8 = 3;
 
+/// FBFMT_RMPPM_RGB565: Paper Pro Move native 954x1696, 2 bytes/pixel.
+#[allow(dead_code)]
+pub const FBFMT_RMPPM_RGB565: u8 = 6;
+
 #[allow(dead_code)]
 pub const REFRESH_MODE_UFAST: i32 = 0;
 pub const REFRESH_MODE_FAST: i32 = 1;

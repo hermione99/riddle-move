@@ -29,11 +29,16 @@ use ab_glyph::FontRef;
 use fb::{BBox, SCREEN_H, SCREEN_W};
 use surface::{Surface, BLACK, WHITE};
 
+// English (default): Dancing Script. Korean (`--features korean`): Nanum Pen
+// Script, which carries both Hangul and Latin glyphs. Both are SIL OFL 1.1.
+#[cfg(not(feature = "korean"))]
 const FONT_TTF: &[u8] = include_bytes!("../fonts/DancingScript.ttf");
+#[cfg(feature = "korean")]
+const FONT_TTF: &[u8] = include_bytes!("../fonts/NanumPenScript-Regular.ttf");
 const PNG_PATH: &str = "/tmp/riddle-page.png";
 
 const IDLE_COMMIT: Duration = Duration::from_millis(2800);
-const REPLY_PX: f32 = 96.0;
+const REPLY_PX: f32 = 76.0;
 const MARGIN_X: i32 = 120;
 
 enum State {
@@ -170,8 +175,33 @@ fn run() -> std::io::Result<()> {
     let mut stylus_tapped = false;
     let mut ink_dirty = BBox::empty();
     let mut last_flush = Instant::now();
-    // Takeover swaps are cheap and synchronous; qtfb needs coalescing.
-    let flush_every = if takeover { Duration::from_millis(8) } else { Duration::from_millis(35) };
+    // Takeover swaps are cheap and synchronous; qtfb goes through xochitl's
+    // compositor (one e-ink refresh per update) so it can't sustain a high
+    // update rate — coalesce harder and draw more per step to avoid backlog.
+    // The qtfb pacing is env-tunable (set in oracle.env) so the sweet spot can
+    // be found without recompiling:
+    //   RIDDLE_FLUSH_MS      — min ms between ink refreshes while writing (default 90)
+    //   RIDDLE_REPLY_STEP_MS — ms between reply write-out steps           (default 90)
+    //   RIDDLE_REPLY_BUDGET  — points drawn per reply step                (default 150)
+    // Bigger STEP/FLUSH = fewer refreshes (less lag/backlog, chunkier);
+    // bigger BUDGET keeps the reply's overall writing speed up.
+    let env_u64 = |k: &str, d: u64| -> u64 {
+        std::env::var(k).ok().and_then(|v| v.trim().parse().ok()).unwrap_or(d)
+    };
+    let flush_every = if takeover {
+        Duration::from_millis(8)
+    } else {
+        Duration::from_millis(env_u64("RIDDLE_FLUSH_MS", 90))
+    };
+    let (reply_step_ms, reply_budget): (u64, i32) = if takeover {
+        (14, 26)
+    } else {
+        (env_u64("RIDDLE_REPLY_STEP_MS", 90), env_u64("RIDDLE_REPLY_BUDGET", 150) as i32)
+    };
+    eprintln!(
+        "riddle: qtfb pacing flush={}ms reply_step={}ms reply_budget={}",
+        flush_every.as_millis(), reply_step_ms, reply_budget
+    );
 
     eprintln!("riddle: the diary is open");
 
@@ -430,7 +460,7 @@ fn run() -> std::io::Result<()> {
                 }
                 if Instant::now() >= next {
                     let mut dirty = BBox::empty();
-                    let mut budget = 26;
+                    let mut budget = reply_budget;
                     while budget > 0 && plan.stroke_i < plan.strokes.len() {
                         let stroke = &plan.strokes[plan.stroke_i];
                         if plan.point_i >= stroke.len() {
@@ -459,7 +489,7 @@ fn run() -> std::io::Result<()> {
                         let region = plan.region;
                         State::Lingering { until: Instant::now() + linger.min(Duration::from_secs(20)), region }
                     } else {
-                        State::Replying { plan, next: Instant::now() + Duration::from_millis(14), rx }
+                        State::Replying { plan, next: Instant::now() + Duration::from_millis(reply_step_ms), rx }
                     }
                 } else {
                     State::Replying { plan, next, rx }
