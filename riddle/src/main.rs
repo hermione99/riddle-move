@@ -112,7 +112,17 @@ fn oracle_test(png: &str) -> i32 {
 }
 
 fn run() -> std::io::Result<()> {
-    let font = FontRef::try_from_slice(FONT_TTF).map_err(std::io::Error::other)?;
+    let primary = FontRef::try_from_slice(FONT_TTF).map_err(std::io::Error::other)?;
+    // Korean build: draw Latin (English, digits, punctuation) in Dancing Script
+    // and Hangul in the primary Korean hand. English build: single font.
+    #[cfg(feature = "korean")]
+    let latin = Some(
+        FontRef::try_from_slice(include_bytes!("../fonts/DancingScript.ttf"))
+            .map_err(std::io::Error::other)?,
+    );
+    #[cfg(not(feature = "korean"))]
+    let latin = None;
+    let font = script::Hand::new(primary, latin);
 
     let (disp, mut surf) = display::Display::open()?;
     let takeover = matches!(disp, display::Display::Quill);
@@ -550,7 +560,7 @@ fn run() -> std::io::Result<()> {
 
 /// Lay out reply text and produce screen-space strokes. `y_start` continues a
 /// streamed reply below its previous chunk; None places the first chunk.
-fn plan_reply(font: &FontRef, text: &str, y_start: Option<i32>) -> WritePlan {
+fn plan_reply(font: &script::Hand, text: &str, y_start: Option<i32>) -> WritePlan {
     let max_w = (SCREEN_W as i32 - 2 * MARGIN_X) as f32;
     let lines = script::wrap(font, text, REPLY_PX, max_w);
     let line_h = (REPLY_PX * 1.25) as i32;
@@ -584,7 +594,7 @@ fn plan_reply(font: &FontRef, text: &str, y_start: Option<i32>) -> WritePlan {
 }
 
 /// Splice a streamed continuation chunk into a running write animation.
-fn append_reply(font: &FontRef, plan: &mut WritePlan, more: &str) {
+fn append_reply(font: &script::Hand, plan: &mut WritePlan, more: &str) {
     let cont = plan_reply(font, more, Some(plan.next_y));
     if cont.strokes.is_empty() {
         return;

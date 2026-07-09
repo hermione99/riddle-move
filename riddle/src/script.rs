@@ -2,7 +2,7 @@
 //! single-pixel pen paths (Zhang-Suen), trace them into ordered strokes, and
 //! yield them for stroke-by-stroke animation.
 
-use ab_glyph::{Font, FontRef, Glyph, PxScale, ScaleFont};
+use ab_glyph::{Font, FontRef, GlyphId, PxScale, ScaleFont};
 
 pub struct Line {
     pub width: usize,
@@ -11,28 +11,79 @@ pub struct Line {
     pub mask: Vec<bool>,
 }
 
-/// Rasterize one line of text at `px` height into a boolean mask.
-pub fn rasterize_line(font: &FontRef, text: &str, px: f32) -> Line {
-    let scaled = font.as_scaled(PxScale::from(px));
-    let mut glyphs: Vec<Glyph> = Vec::new();
-    let mut caret = 0.0f32;
-    let mut prev: Option<ab_glyph::GlyphId> = None;
-    for c in text.chars() {
-        let id = scaled.glyph_id(c);
-        if let Some(p) = prev {
-            caret += scaled.kern(p, id);
+/// The reply hand: a primary font plus an optional Latin font. Each character
+/// is drawn with the Latin font when it covers that glyph (so English is drawn
+/// in e.g. Dancing Script) and the primary font otherwise (e.g. Hangul in
+/// Nanum). With `latin: None` this behaves as a single font.
+pub struct Hand<'a> {
+    primary: FontRef<'a>,
+    latin: Option<FontRef<'a>>,
+}
+
+impl<'a> Hand<'a> {
+    pub fn new(primary: FontRef<'a>, latin: Option<FontRef<'a>>) -> Self {
+        Self { primary, latin }
+    }
+
+    /// (font index, font) for `c`. Index 1 = latin, 0 = primary. The latin
+    /// font wins only for glyphs it actually has (glyph_id 0 == .notdef).
+    fn font_for(&self, c: char) -> (usize, &FontRef<'a>) {
+        if let Some(l) = &self.latin {
+            if l.glyph_id(c).0 != 0 {
+                return (1, l);
+            }
         }
-        let mut g = id.with_scale(PxScale::from(px));
-        g.position = ab_glyph::point(caret, scaled.ascent());
-        caret += scaled.h_advance(id);
-        glyphs.push(g);
-        prev = Some(id);
+        (0, &self.primary)
+    }
+
+    fn font_by_index(&self, i: usize) -> &FontRef<'a> {
+        match i {
+            1 => self.latin.as_ref().unwrap_or(&self.primary),
+            _ => &self.primary,
+        }
+    }
+
+    /// Shared baseline ascent and mask height, taken as the max over both fonts
+    /// so mixed lines share one baseline and neither font clips.
+    fn metrics(&self, px: f32) -> (f32, usize) {
+        let sp = self.primary.as_scaled(PxScale::from(px));
+        let mut ascent = sp.ascent();
+        let mut height = sp.height();
+        if let Some(l) = &self.latin {
+            let sl = l.as_scaled(PxScale::from(px));
+            ascent = ascent.max(sl.ascent());
+            height = height.max(sl.height());
+        }
+        (ascent, (height.ceil() as usize + 4).max(1))
+    }
+}
+
+/// Rasterize one line of text at `px` height into a boolean mask.
+pub fn rasterize_line(hand: &Hand, text: &str, px: f32) -> Line {
+    let scale = PxScale::from(px);
+    let (ascent, height) = hand.metrics(px);
+    let mut caret = 0.0f32;
+    let mut placed: Vec<(usize, ab_glyph::Glyph)> = Vec::new();
+    let mut prev: Option<(usize, GlyphId)> = None;
+    for c in text.chars() {
+        let (fi, f) = hand.font_for(c);
+        let s = f.as_scaled(scale);
+        let id = s.glyph_id(c);
+        if let Some((pfi, pid)) = prev {
+            if pfi == fi {
+                caret += s.kern(pid, id);
+            }
+        }
+        let mut g = id.with_scale(scale);
+        g.position = ab_glyph::point(caret, ascent);
+        caret += s.h_advance(id);
+        placed.push((fi, g));
+        prev = Some((fi, id));
     }
     let width = (caret.ceil() as usize + 4).max(1);
-    let height = (scaled.height().ceil() as usize + 4).max(1);
     let mut mask = vec![false; width * height];
-    for g in glyphs {
-        if let Some(outline) = font.outline_glyph(g) {
+    for (fi, g) in placed {
+        if let Some(outline) = hand.font_by_index(fi).outline_glyph(g) {
             let bounds = outline.px_bounds();
             outline.draw(|x, y, cov| {
                 if cov > 0.5 {
@@ -49,17 +100,21 @@ pub fn rasterize_line(font: &FontRef, text: &str, px: f32) -> Line {
 }
 
 /// Measure the advance width of text at `px` without rasterizing.
-pub fn measure(font: &FontRef, text: &str, px: f32) -> f32 {
-    let scaled = font.as_scaled(PxScale::from(px));
+pub fn measure(hand: &Hand, text: &str, px: f32) -> f32 {
+    let scale = PxScale::from(px);
     let mut caret = 0.0f32;
-    let mut prev: Option<ab_glyph::GlyphId> = None;
+    let mut prev: Option<(usize, GlyphId)> = None;
     for c in text.chars() {
-        let id = scaled.glyph_id(c);
-        if let Some(p) = prev {
-            caret += scaled.kern(p, id);
+        let (fi, f) = hand.font_for(c);
+        let s = f.as_scaled(scale);
+        let id = s.glyph_id(c);
+        if let Some((pfi, pid)) = prev {
+            if pfi == fi {
+                caret += s.kern(pid, id);
+            }
         }
-        caret += scaled.h_advance(id);
-        prev = Some(id);
+        caret += s.h_advance(id);
+        prev = Some((fi, id));
     }
     caret
 }
@@ -196,13 +251,13 @@ pub fn trace(line: &Line) -> Vec<Vec<(i32, i32)>> {
 }
 
 /// Word-wrap `text` to lines that fit `max_px` at scale `px`.
-pub fn wrap(font: &FontRef, text: &str, px: f32, max_px: f32) -> Vec<String> {
+pub fn wrap(hand: &Hand, text: &str, px: f32, max_px: f32) -> Vec<String> {
     let mut lines = Vec::new();
     for para in text.lines() {
         let mut cur = String::new();
         for word in para.split_whitespace() {
             let cand = if cur.is_empty() { word.to_string() } else { format!("{cur} {word}") };
-            if measure(font, &cand, px) <= max_px || cur.is_empty() {
+            if measure(hand, &cand, px) <= max_px || cur.is_empty() {
                 cur = cand;
             } else {
                 lines.push(std::mem::take(&mut cur));
@@ -223,7 +278,8 @@ mod tests {
     #[test]
     fn pipeline_produces_strokes() {
         let font = FontRef::try_from_slice(include_bytes!("../fonts/DancingScript.ttf")).unwrap();
-        let mut line = rasterize_line(&font, "Yes, Harry?", 96.0);
+        let hand = Hand::new(font, None);
+        let mut line = rasterize_line(&hand, "Yes, Harry?", 96.0);
         assert!(line.width > 100 && line.height > 50);
         let inked_before: usize = line.mask.iter().filter(|&&v| v).count();
         thin(&mut line);
@@ -235,7 +291,7 @@ mod tests {
         println!("strokes={} total_points={} ({}x{})", strokes.len(), total, line.width, line.height);
         assert!(total > 200, "expected a decent path length, got {total}");
         // Wrap sanity.
-        let lines = wrap(&font, "Do you know anything about the Chamber of Secrets?", 96.0, 1380.0);
+        let lines = wrap(&hand, "Do you know anything about the Chamber of Secrets?", 96.0, 1380.0);
         assert!(lines.len() >= 2);
     }
 }
