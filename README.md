@@ -34,22 +34,45 @@ Move-specific values are baked in:
 
 ## Building
 
-Two independent switches:
-- **Language:** English (default) or `--features korean`
-- **Display:** windowed via AppLoad/qtfb (default), or full-takeover `--features takeover`
+Two **independent** switches — any of the four combinations is valid:
+
+- **Language:** English (default), or Korean with `--features korean`
+- **Display:** windowed via AppLoad/qtfb (default), or full-takeover with `--features takeover`
+
+| | **Windowed** (AppLoad/qtfb) — static musl, no SDK | **Full-takeover** (instant ink) — needs vendor libs |
+|---|---|---|
+| **English** | `--target aarch64-unknown-linux-musl` | `--target aarch64-unknown-linux-gnu --features takeover` |
+| **Korean** | `--target aarch64-unknown-linux-musl --features korean` | `--target aarch64-unknown-linux-gnu --features "korean takeover"` |
 
 ```sh
 cd riddle
 
-# English, windowed (static musl — no SDK needed):
+# English, windowed (static musl — no SDK, no vendor libs):
 cargo build --release --target aarch64-unknown-linux-musl
+
+# English, full-takeover (instant ink — needs libquill.so + libqsgepaper.so, see below):
+cargo build --release --target aarch64-unknown-linux-gnu --features takeover
 
 # Korean, windowed:
 cargo build --release --target aarch64-unknown-linux-musl --features korean
 
-# Korean, full-takeover (instant ink — needs libquill.so + libqsgepaper.so, see below):
+# Korean, full-takeover:
 cargo build --release --target aarch64-unknown-linux-gnu --features "korean takeover"
 ```
+
+**Windowed vs takeover:** windowed builds are the easy path — fully static
+(musl), need no SDK and no vendor libraries, and run as a normal AppLoad
+window, but ink goes through xochitl's compositor so it can't match takeover's
+latency (tune with the `RIDDLE_*` env vars above). Takeover drives the vendor
+e-ink engine directly for instant ink, but must link the vendor libraries
+described below.
+
+**Cross-compiling takeover without the reMarkable SDK:** the `gnu` targets only
+need a macOS/Linux-hosted `aarch64-unknown-linux-gnu` toolchain (e.g. Homebrew's
+`messense/macos-cross-toolchains`). Pass `-C link-arg=-Wl,--allow-shlib-undefined`
+so the linker doesn't need a full Qt sysroot — the vendor libraries resolve at
+runtime on the device. Building against the toolchain's older glibc and running
+on the device's newer glibc is fine.
 
 ### Vendor libraries (takeover mode only) — not distributed here
 
